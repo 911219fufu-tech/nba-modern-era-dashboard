@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NBA Performance Dashboard (1999-2023)</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="page-header card">
+        <h1>NBA Performance Dashboard (1999-2023)</h1>
+        <div class="controls-group" aria-label="Dashboard filters">
+          <label>
+            <span>Season</span>
+            <select id="season-filter"></select>
+          </label>
+          <label>
+            <span>Team</span>
+            <select id="team-filter"></select>
+          </label>
+          <label>
+            <span>Game Type</span>
+            <select id="type-filter"></select>
+          </label>
+        </div>
+      </header>
+
+      <section class="dashboard-grid">
+        <article class="card scatter-card">
+          <div class="card-head">
+            <h2>Field Goal Efficiency vs Scoring</h2>
+            <p>Blue = Win, Red = Loss | Circle = Regular, Triangle = Playoffs</p>
+          </div>
+          <div class="legend-inline" aria-hidden="true">
+            <div class="legend-item">
+              <span class="legend-dot win"></span>
+              <span class="legend-text">Blue Circle = Win</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot loss"></span>
+              <span class="legend-text">Red Circle = Loss</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <div id="scatter-chart" class="chart"></div>
+            <aside class="mock-tooltip" aria-hidden="true">
+              Team: Lakers | Score: 112-108 | FG%: 48%
+            </aside>
+          </div>
+        </article>
+
+        <article class="card side-card">
+          <div class="card-head">
+            <h2>Home Court Advantage</h2>
+            <p>Home vs Away Average Points</p>
+          </div>
+          <div id="bar-chart" class="chart"></div>
+        </article>
+
+        <article class="card side-card line-card">
+          <div class="card-head">
+            <h2>Scoring Trends (1999-2023)</h2>
+            <p>Average Points by Season</p>
+          </div>
+          <div id="line-chart" class="chart"></div>
+          <p class="slider-hint">Time Range Slider (bottom of chart) filters all views.</p>
+        </article>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
