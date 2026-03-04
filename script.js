@@ -1,5 +1,38 @@
 const DATA_PATH = "data/nba_team_game_1999_2023.csv";
 
+const TEAM_NAMES = {
+  ATL: "Atlanta - Hawks",
+  BOS: "Boston - Celtics",
+  BKN: "Brooklyn - Nets",
+  CHA: "Charlotte - Hornets",
+  CHI: "Chicago - Bulls",
+  CLE: "Cleveland - Cavaliers",
+  DAL: "Dallas - Mavericks",
+  DEN: "Denver - Nuggets",
+  DET: "Detroit - Pistons",
+  GSW: "Golden State - Warriors",
+  HOU: "Houston - Rockets",
+  IND: "Indiana - Pacers",
+  LAC: "Los Angeles - Clippers",
+  LAL: "Los Angeles - Lakers",
+  MEM: "Memphis - Grizzlies",
+  MIA: "Miami - Heat",
+  MIL: "Milwaukee - Bucks",
+  MIN: "Minnesota - Timberwolves",
+  NOP: "New Orleans - Pelicans",
+  NYK: "New York - Knicks",
+  OKC: "Oklahoma City - Thunder",
+  ORL: "Orlando - Magic",
+  PHI: "Philadelphia - 76ers",
+  PHX: "Phoenix - Suns",
+  POR: "Portland - Trail Blazers",
+  SAC: "Sacramento - Kings",
+  SAS: "San Antonio - Spurs",
+  TOR: "Toronto - Raptors",
+  UTA: "Utah - Jazz",
+  WAS: "Washington - Wizards",
+};
+
 const state = {
   rawData: [],
   seasons: [],
@@ -21,6 +54,11 @@ const colorMap = {
   Win: "#1f77b4",
   Loss: "#d62728",
 };
+
+function getTeamName(abbr) {
+  const key = String(abbr || "").trim().toUpperCase();
+  return TEAM_NAMES[key] || abbr;
+}
 
 // 3-type mapping:
 // Regular Season -> circle
@@ -110,9 +148,14 @@ function initControls() {
 }
 
 function buildOptions(selectEl, values) {
-  selectEl.innerHTML = values
-    .map((v) => `<option value="${v}">${v === "All" ? "All" : v}</option>`)
-    .join("");
+  if (selectEl.id === "team-filter") {
+    selectEl.innerHTML = values
+      .map((v) => `<option value="${v}">${v === "All" ? "All" : getTeamName(v)}</option>`)
+      .join("");
+    return;
+  }
+
+  selectEl.innerHTML = values.map((v) => `<option value="${v}">${v === "All" ? "All" : v}</option>`).join("");
 }
 
 function getFilteredData({ applyTime = true } = {}) {
@@ -184,8 +227,8 @@ function renderScatter(data) {
         x: rows.map((d) => d.fg_pct),
         y: rows.map((d) => d.points),
         customdata: rows.map((d) => [
-          d.team,
-          d.opponent,
+          getTeamName(d.team),
+          getTeamName(d.opponent),
           d.points,
           d.fg_pct,
           d.season_label,
