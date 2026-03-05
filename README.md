@@ -30,8 +30,8 @@ Raw preprocessing scripts and intermediate data are excluded from the deployment
 
 ## Data source
 
-This dataset is sourced from Kaggle:  
-https://www.kaggle.com/datasets/wyattowalsh/basketball
+**Raw source file:** `game.csv` from the Kaggle dataset below.  
+Link: https://www.kaggle.com/datasets/wyattowalsh/basketball
 
 ## How to Run Locally
 
