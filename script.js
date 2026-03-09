@@ -344,6 +344,11 @@ function renderLine(dataWithoutTimeFilter) {
     showlegend: false,
   };
 
+  // When only one season is selected, avoid a zero-width x-axis range.
+  const xMin = state.timeRange.min;
+  const xMax = state.timeRange.max;
+  const xRange = xMin === xMax ? [xMin - 0.5, xMax + 0.5] : [xMin, xMax];
+
   const layout = {
     margin: { t: 14, r: 12, b: 48, l: 50 },
     paper_bgcolor: "#ffffff",
@@ -352,7 +357,7 @@ function renderLine(dataWithoutTimeFilter) {
       title: "Season Year",
       tickmode: "linear",
       dtick: 2,
-      range: [state.timeRange.min, state.timeRange.max],
+      range: xRange,
       rangeslider: {
         visible: true,
         bgcolor: "#eef2f7",

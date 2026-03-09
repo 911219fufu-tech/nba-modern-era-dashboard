@@ -95,12 +95,12 @@ select {
   padding: 18px;
 }
 
-.line-card {
-  grid-area: line;
+.bar-card {
+  grid-area: bar;
 }
 
-.side-card:first-of-type {
-  grid-area: bar;
+.line-card {
+  grid-area: line;
 }
 
 .card-head {
@@ -208,4 +208,3 @@ select {
     min-height: 430px;
   }
 }
-
