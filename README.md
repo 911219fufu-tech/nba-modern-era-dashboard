@@ -2,6 +2,10 @@
 
 This repository contains a static interactive dashboard for **NBA Modern Era Performance Analysis (1999-2023)**.
 
+## Live Demo
+
+https://nba-modern-era-dashboard.vercel.app
+
 ## Folder structure
 
 - `index.html` - main dashboard page
