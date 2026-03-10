@@ -54,7 +54,16 @@
 
         <article class="card side-card bar-card">
           <div class="card-head">
-            <h2>Home Court Advantage</h2>
+            <div class="line-head-row">
+              <h2>Home Court Advantage</h2>
+              <label class="line-metric-control" for="bar-metric">
+                <span>Metric</span>
+                <select id="bar-metric">
+                  <option value="points">Avg Points</option>
+                  <option value="win_rate">Win Rate</option>
+                </select>
+              </label>
+            </div>
             <p>Home vs Away Average Points</p>
           </div>
           <div id="bar-chart" class="chart"></div>
@@ -87,6 +96,6 @@
       </a>
     </footer>
 
-    <script src="script.js?v=20260310"></script>
+    <script src="script.js?v=20260311"></script>
   </body>
 </html>

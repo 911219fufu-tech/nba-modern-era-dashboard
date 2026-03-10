@@ -47,6 +47,7 @@ const state = {
     min: null,
     max: null,
   },
+  barMetric: "points",
   lineMetric: "points",
   lineListenerAttached: false,
 };
@@ -121,6 +122,7 @@ function initControls() {
   const seasonSelect = document.getElementById("season-filter");
   const teamSelect = document.getElementById("team-filter");
   const typeSelect = document.getElementById("type-filter");
+  const barMetricSelect = document.getElementById("bar-metric");
   const lineMetricSelect = document.getElementById("line-metric");
 
   const seasonLabels = [...new Map(state.rawData.map((d) => [d.season_year, d.season_label])).entries()]
@@ -148,6 +150,15 @@ function initControls() {
     syncTimeRangeToFilteredDomain();
     updateAllViews();
   });
+
+  if (barMetricSelect) {
+    barMetricSelect.value = state.barMetric;
+    barMetricSelect.addEventListener("change", (e) => {
+      state.barMetric = e.target.value;
+      const filtered = getFilteredData({ applyTime: true });
+      renderBar(filtered);
+    });
+  }
 
   if (lineMetricSelect) {
     lineMetricSelect.value = state.lineMetric;
@@ -297,13 +308,21 @@ function renderScatter(data) {
 
 function renderBar(data) {
   const groups = { Home: [], Away: [] };
+  const subtitleEl = document.querySelector(".bar-card .card-head p");
   data.forEach((d) => {
-    if (d.home_away === "Home") groups.Home.push(d.points);
-    if (d.home_away === "Away") groups.Away.push(d.points);
+    if (d.home_away === "Home") groups.Home.push(d);
+    if (d.home_away === "Away") groups.Away.push(d);
   });
 
-  const avg = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
-  const yValues = [avg(groups.Home), avg(groups.Away)];
+  const mean = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+  const isWinRate = state.barMetric === "win_rate";
+  const yValues = isWinRate
+    ? [
+        mean(groups.Home.map((d) => (d.win === "Win" ? 1 : 0))),
+        mean(groups.Away.map((d) => (d.win === "Win" ? 1 : 0))),
+      ]
+    : [mean(groups.Home.map((d) => d.points)), mean(groups.Away.map((d) => d.points))];
+  const textValues = isWinRate ? yValues.map((v) => `${(v * 100).toFixed(0)}%`) : yValues.map((v) => v.toFixed(1));
 
   const trace = {
     type: "bar",
@@ -313,9 +332,9 @@ function renderBar(data) {
       color: ["#4c78a8", "#f58518"],
       line: { width: 0 },
     },
-    text: yValues.map((v) => v.toFixed(1)),
+    text: textValues,
     textposition: "outside",
-    hovertemplate: "%{x}: %{y:.2f}<extra></extra>",
+    hovertemplate: isWinRate ? "%{x}: %{y:.1%}<extra></extra>" : "%{x}: %{y:.2f}<extra></extra>",
   };
 
   const layout = {
@@ -323,12 +342,17 @@ function renderBar(data) {
     paper_bgcolor: "#ffffff",
     plot_bgcolor: "#ffffff",
     yaxis: {
-      title: "Avg Points",
+      title: isWinRate ? "Win Rate" : "Avg Points",
+      tickformat: isWinRate ? ".0%" : undefined,
       gridcolor: "#edf0f3",
       zeroline: false,
     },
     xaxis: { title: "" },
   };
+
+  if (subtitleEl) {
+    subtitleEl.textContent = isWinRate ? "Home vs Away Win Rate" : "Home vs Away Average Points";
+  }
 
   Plotly.react("bar-chart", [trace], layout, {
     responsive: true,
