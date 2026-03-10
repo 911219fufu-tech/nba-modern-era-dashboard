@@ -47,6 +47,7 @@ const state = {
     min: null,
     max: null,
   },
+  lineMetric: "points",
   lineListenerAttached: false,
 };
 
@@ -83,6 +84,7 @@ function loadData() {
           dateObj: new Date(row.date),
           points: Number.parseFloat(row.points),
           fg_pct: Number.parseFloat(row.fg_pct),
+          three_pa_rate: Number.parseFloat(row.three_pa_rate),
           season_year: Number.parseInt(row.season_year, 10),
         }))
         .filter(
@@ -119,6 +121,7 @@ function initControls() {
   const seasonSelect = document.getElementById("season-filter");
   const teamSelect = document.getElementById("team-filter");
   const typeSelect = document.getElementById("type-filter");
+  const lineMetricSelect = document.getElementById("line-metric");
 
   const seasonLabels = [...new Map(state.rawData.map((d) => [d.season_year, d.season_label])).entries()]
     .sort((a, b) => a[0] - b[0])
@@ -145,6 +148,20 @@ function initControls() {
     syncTimeRangeToFilteredDomain();
     updateAllViews();
   });
+
+  if (lineMetricSelect) {
+    lineMetricSelect.value = state.lineMetric;
+    lineMetricSelect.addEventListener("change", (e) => {
+      const nextMetric = e.target.value;
+      if (state.lineMetric !== nextMetric) {
+        state.lineMetric = nextMetric;
+        Plotly.purge("line-chart");
+        state.lineListenerAttached = false;
+      }
+      const noTimeFiltered = getFilteredData({ applyTime: false });
+      renderLine(noTimeFiltered);
+    });
+  }
 }
 
 function buildOptions(selectEl, values) {
@@ -320,29 +337,62 @@ function renderBar(data) {
 }
 
 function renderLine(dataWithoutTimeFilter) {
-  const grouped = new Map();
+  const metricMode = state.lineMetric || "points";
+  const seasonsSorted = [...new Set(dataWithoutTimeFilter.map((d) => d.season_year))].sort((a, b) => a - b);
+  const subtitleEl = document.querySelector(".line-card .card-head p");
 
+  const grouped = new Map(seasonsSorted.map((year) => [year, { points: [], threePaRate: [] }]));
   dataWithoutTimeFilter.forEach((d) => {
-    if (!grouped.has(d.season_year)) grouped.set(d.season_year, []);
-    grouped.get(d.season_year).push(d.points);
+    const bucket = grouped.get(d.season_year);
+    if (!bucket) return;
+
+    if (Number.isFinite(d.points)) bucket.points.push(d.points);
+    if (Number.isFinite(d.three_pa_rate)) bucket.threePaRate.push(d.three_pa_rate);
   });
 
-  const seasonsSorted = [...grouped.keys()].sort((a, b) => a - b);
   const avgPoints = seasonsSorted.map((year) => {
-    const values = grouped.get(year);
-    return values.reduce((sum, val) => sum + val, 0) / values.length;
+    const values = grouped.get(year).points;
+    return values.length ? values.reduce((sum, val) => sum + val, 0) / values.length : null;
+  });
+  const avgThreePaRate = seasonsSorted.map((year) => {
+    const values = grouped.get(year).threePaRate;
+    return values.length ? values.reduce((sum, val) => sum + val, 0) / values.length : null;
   });
 
-  const trace = {
+  const pointsTrace = {
     type: "scatter",
     mode: "lines+markers",
+    name: "Avg Points",
     x: seasonsSorted,
     y: avgPoints,
     line: { color: "#0f766e", width: 2.5 },
     marker: { color: "#0f766e", size: 6 },
-    hovertemplate: "Season %{x}: %{y:.2f} pts<extra></extra>",
-    showlegend: false,
+    yaxis: "y",
+    hovertemplate: "Avg Points: %{y:.2f}<extra></extra>",
+    connectgaps: false,
+    showlegend: metricMode === "both",
   };
+
+  const rateTrace = {
+    type: "scatter",
+    mode: "lines+markers",
+    name: "Avg 3PA Rate",
+    x: seasonsSorted,
+    y: avgThreePaRate,
+    line: { color: "#d97706", width: 2.5 },
+    marker: { color: "#d97706", size: 6 },
+    yaxis: metricMode === "both" ? "y2" : "y",
+    hovertemplate: "Avg 3PA Rate: %{y:.1%}<extra></extra>",
+    connectgaps: false,
+    showlegend: metricMode === "both",
+  };
+
+  const traces =
+    metricMode === "both"
+      ? [pointsTrace, rateTrace]
+      : metricMode === "three_pa_rate"
+        ? [rateTrace]
+        : [pointsTrace];
 
   // When only one season is selected, avoid a zero-width x-axis range.
   const xMin = state.timeRange.min;
@@ -350,7 +400,7 @@ function renderLine(dataWithoutTimeFilter) {
   const xRange = xMin === xMax ? [xMin - 0.5, xMax + 0.5] : [xMin, xMax];
 
   const layout = {
-    margin: { t: 14, r: 12, b: 48, l: 50 },
+    margin: { t: 14, r: 92, b: 48, l: 50 },
     paper_bgcolor: "#ffffff",
     plot_bgcolor: "#ffffff",
     xaxis: {
@@ -366,13 +416,37 @@ function renderLine(dataWithoutTimeFilter) {
       gridcolor: "#edf0f3",
     },
     yaxis: {
-      title: "Avg Points",
+      title: metricMode === "three_pa_rate" ? "Avg 3PA Rate (3PA/FGA)" : "Avg Points",
+      tickformat: metricMode === "three_pa_rate" ? ".0%" : undefined,
       gridcolor: "#edf0f3",
       zeroline: false,
     },
+    yaxis2: {
+      visible: metricMode === "both",
+      overlaying: "y",
+      side: "right",
+      tickformat: ".0%",
+      automargin: true,
+      title: { text: "Avg 3PA Rate (3PA/FGA)", standoff: 12 },
+      ticklabelposition: "outside",
+      showgrid: false,
+      zeroline: false,
+    },
+    hovermode: metricMode === "both" ? "x unified" : "closest",
+    showlegend: metricMode === "both",
+    legend: { orientation: "h", y: 1.1, x: 0 },
   };
 
-  Plotly.react("line-chart", [trace], layout, {
+  if (subtitleEl) {
+    subtitleEl.textContent =
+      metricMode === "both"
+        ? "Average Points and 3PA Rate by Season"
+        : metricMode === "three_pa_rate"
+          ? "Average 3PA Rate by Season"
+          : "Average Points by Season";
+  }
+
+  Plotly.react("line-chart", traces, layout, {
     responsive: true,
     displayModeBar: false,
   });

@@ -19,3 +19,7 @@
 
 ## Data Quality Actions
 - Dropped 139 games with non-modern team abbreviations after normalization.
+
+## Three-Point Metrics
+- Included columns: fg3a, fg3m, fg3_pct, fga
+- Missing/unavailable columns: None

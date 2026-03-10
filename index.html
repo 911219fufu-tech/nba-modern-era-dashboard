@@ -62,7 +62,17 @@
 
         <article class="card side-card line-card">
           <div class="card-head">
-            <h2>Scoring Trends (1999-2023)</h2>
+            <div class="line-head-row">
+              <h2>Scoring Trends (1999-2023)</h2>
+              <label class="line-metric-control" for="line-metric">
+                <span>Metric</span>
+                <select id="line-metric">
+                  <option value="points">Avg Points</option>
+                  <option value="three_pa_rate">Avg 3PA Rate</option>
+                  <option value="both">Both</option>
+                </select>
+              </label>
+            </div>
             <p>Average Points by Season</p>
           </div>
           <div id="line-chart" class="chart"></div>
@@ -77,6 +87,6 @@
       </a>
     </footer>
 
-    <script src="script.js?v=20260304"></script>
+    <script src="script.js?v=20260310"></script>
   </body>
 </html>

@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 INPUT_PATH = Path("game.csv")
-OUTPUT_PATH = Path("dashboard_ready.csv")
+OUTPUT_PATH = Path("data/nba_team_game_1999_2023.csv")
 REPORT_PATH = Path("data_prep_report.md")
 
 DATE_START = pd.Timestamp("1999-10-01")
@@ -56,6 +56,14 @@ class ColumnMap:
     points_away: str
     fg_home: str
     fg_away: str
+    fg3a_home: str | None
+    fg3a_away: str | None
+    fg3m_home: str | None
+    fg3m_away: str | None
+    fg3_pct_home: str | None
+    fg3_pct_away: str | None
+    fga_home: str | None
+    fga_away: str | None
     season_type: str | None
     game_id: str | None
 
@@ -79,6 +87,18 @@ def detect_columns(df: pd.DataFrame) -> ColumnMap:
     points_away = find_first_existing(df, ["pts_away", "away_points", "points_away"])
     fg_home = find_first_existing(df, ["fg_pct_home", "home_fg_pct", "fg_home"])
     fg_away = find_first_existing(df, ["fg_pct_away", "away_fg_pct", "fg_away"])
+    fg3a_home = find_first_existing(df, ["fg3a_home", "fg3aHome", "home_fg3a", "fg3a"])
+    fg3a_away = find_first_existing(df, ["fg3a_away", "fg3aAway", "away_fg3a", "fg3a"])
+    fg3m_home = find_first_existing(df, ["fg3m_home", "fg3mHome", "home_fg3m", "fg3m"])
+    fg3m_away = find_first_existing(df, ["fg3m_away", "fg3mAway", "away_fg3m", "fg3m"])
+    fg3_pct_home = find_first_existing(
+        df, ["fg3_pct_home", "fg3PctHome", "home_fg3_pct", "fg3_pct"]
+    )
+    fg3_pct_away = find_first_existing(
+        df, ["fg3_pct_away", "fg3PctAway", "away_fg3_pct", "fg3_pct"]
+    )
+    fga_home = find_first_existing(df, ["fga_home", "fgaHome", "home_fga", "fga"])
+    fga_away = find_first_existing(df, ["fga_away", "fgaAway", "away_fga", "fga"])
 
     required = {
         "team_home": team_home,
@@ -100,6 +120,14 @@ def detect_columns(df: pd.DataFrame) -> ColumnMap:
         points_away=points_away,
         fg_home=fg_home,
         fg_away=fg_away,
+        fg3a_home=fg3a_home,
+        fg3a_away=fg3a_away,
+        fg3m_home=fg3m_home,
+        fg3m_away=fg3m_away,
+        fg3_pct_home=fg3_pct_home,
+        fg3_pct_away=fg3_pct_away,
+        fga_home=fga_home,
+        fga_away=fga_away,
         season_type=find_first_existing(df, ["season_type", "game_type", "type"]),
         game_id=find_first_existing(df, ["game_id", "id", "gameid"]),
     )
@@ -123,8 +151,12 @@ def derive_season_label(season_year: pd.Series) -> pd.Series:
     return season_year.astype(str) + "-" + ((season_year + 1) % 100).astype(str).str.zfill(2)
 
 
-def transform_to_team_game(df: pd.DataFrame, cols: ColumnMap) -> tuple[pd.DataFrame, list[str]]:
+def transform_to_team_game(
+    df: pd.DataFrame, cols: ColumnMap
+) -> tuple[pd.DataFrame, list[str], list[str], list[str]]:
     warnings: list[str] = []
+    included_3pt_cols: list[str] = []
+    missing_3pt_cols: list[str] = []
 
     work = df.copy()
     work[cols.date] = pd.to_datetime(work[cols.date], errors="coerce")
@@ -156,35 +188,58 @@ def transform_to_team_game(df: pd.DataFrame, cols: ColumnMap) -> tuple[pd.DataFr
         work[cols.date].dt.strftime("%Y%m%d") + "_" + work.index.astype(str)
     )
 
-    home = pd.DataFrame(
-        {
-            "date": work[cols.date],
-            "team": work[cols.team_home],
-            "opponent": work[cols.team_away],
-            "home_away": "Home",
-            "points": pd.to_numeric(work[cols.points_home], errors="coerce"),
-            "fg_pct": pd.to_numeric(work[cols.fg_home], errors="coerce"),
-            "opponent_points": pd.to_numeric(work[cols.points_away], errors="coerce"),
-            "season_type": season_type_values.values,
-            "game_id": game_id_values.values,
-        }
-    )
+    home_dict = {
+        "date": work[cols.date],
+        "team": work[cols.team_home],
+        "opponent": work[cols.team_away],
+        "home_away": "Home",
+        "points": pd.to_numeric(work[cols.points_home], errors="coerce"),
+        "fg_pct": pd.to_numeric(work[cols.fg_home], errors="coerce"),
+        "opponent_points": pd.to_numeric(work[cols.points_away], errors="coerce"),
+        "season_type": season_type_values.values,
+        "game_id": game_id_values.values,
+    }
+    away_dict = {
+        "date": work[cols.date],
+        "team": work[cols.team_away],
+        "opponent": work[cols.team_home],
+        "home_away": "Away",
+        "points": pd.to_numeric(work[cols.points_away], errors="coerce"),
+        "fg_pct": pd.to_numeric(work[cols.fg_away], errors="coerce"),
+        "opponent_points": pd.to_numeric(work[cols.points_home], errors="coerce"),
+        "season_type": season_type_values.values,
+        "game_id": game_id_values.values,
+    }
 
-    away = pd.DataFrame(
-        {
-            "date": work[cols.date],
-            "team": work[cols.team_away],
-            "opponent": work[cols.team_home],
-            "home_away": "Away",
-            "points": pd.to_numeric(work[cols.points_away], errors="coerce"),
-            "fg_pct": pd.to_numeric(work[cols.fg_away], errors="coerce"),
-            "opponent_points": pd.to_numeric(work[cols.points_home], errors="coerce"),
-            "season_type": season_type_values.values,
-            "game_id": game_id_values.values,
-        }
-    )
+    metric_pairs = [
+        ("fg3a", cols.fg3a_home, cols.fg3a_away),
+        ("fg3m", cols.fg3m_home, cols.fg3m_away),
+        ("fg3_pct", cols.fg3_pct_home, cols.fg3_pct_away),
+        ("fga", cols.fga_home, cols.fga_away),
+    ]
+    for metric_name, home_col, away_col in metric_pairs:
+        if home_col and away_col:
+            home_dict[metric_name] = pd.to_numeric(work[home_col], errors="coerce")
+            away_dict[metric_name] = pd.to_numeric(work[away_col], errors="coerce")
+            included_3pt_cols.append(metric_name)
+        else:
+            missing_3pt_cols.append(metric_name)
+            if home_col or away_col:
+                missing_side = "away" if home_col else "home"
+                warnings.append(
+                    f"Could not include `{metric_name}` because {missing_side} column is missing."
+                )
+            else:
+                warnings.append(
+                    f"Could not include `{metric_name}` because both home/away columns are missing."
+                )
+
+    home = pd.DataFrame(home_dict)
+    away = pd.DataFrame(away_dict)
 
     out = pd.concat([home, away], ignore_index=True)
+    if "fg3a" in out.columns and "fga" in out.columns:
+        out["three_pa_rate"] = np.where(out["fga"] > 0, out["fg3a"] / out["fga"], np.nan)
     out["season_year"] = derive_season_year(out["date"])
     out["season_label"] = derive_season_label(out["season_year"])
     out["win"] = np.where(out["points"] > out["opponent_points"], "Win", "Loss")
@@ -220,15 +275,26 @@ def transform_to_team_game(df: pd.DataFrame, cols: ColumnMap) -> tuple[pd.DataFr
         "season_year",
         "season_label",
     ]
+    optional_col_order = ["fg3a", "fg3m", "fg3_pct", "fga", "three_pa_rate"]
+    final_cols.extend([col for col in optional_col_order if col in out.columns])
 
-    return out[final_cols].sort_values(["date", "game_id", "home_away"]).reset_index(drop=True), warnings
+    return (
+        out[final_cols].sort_values(["date", "game_id", "home_away"]).reset_index(drop=True),
+        warnings,
+        included_3pt_cols,
+        missing_3pt_cols,
+    )
 
 
-def write_report(df: pd.DataFrame, warnings: list[str]) -> None:
+def write_report(
+    df: pd.DataFrame, warnings: list[str], included_3pt_cols: list[str], missing_3pt_cols: list[str]
+) -> None:
     season_years = sorted(df["season_year"].dropna().astype(int).unique().tolist())
     date_min = df["date"].min() if not df.empty else "N/A"
     date_max = df["date"].max() if not df.empty else "N/A"
     warning_lines = "\n".join(f"- {w}" for w in warnings) if warnings else "- None"
+    included_lines = ", ".join(included_3pt_cols) if included_3pt_cols else "None"
+    missing_lines = ", ".join(sorted(set(missing_3pt_cols))) if missing_3pt_cols else "None"
 
     report = f"""# Data Preparation Report
 
@@ -251,6 +317,10 @@ def write_report(df: pd.DataFrame, warnings: list[str]) -> None:
 
 ## Data Quality Actions
 {warning_lines}
+
+## Three-Point Metrics
+- Included columns: {included_lines}
+- Missing/unavailable columns: {missing_lines}
 """
 
     REPORT_PATH.write_text(report)
@@ -263,9 +333,10 @@ def main() -> None:
     df = pd.read_csv(INPUT_PATH)
     cols = detect_columns(df)
 
-    processed, warnings = transform_to_team_game(df, cols)
+    processed, warnings, included_3pt_cols, missing_3pt_cols = transform_to_team_game(df, cols)
+    OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     processed.to_csv(OUTPUT_PATH, index=False)
-    write_report(processed, warnings)
+    write_report(processed, warnings, included_3pt_cols, missing_3pt_cols)
 
     # Sanity check prints requested by user.
     print(f"min(date): {processed['date'].min()}")
@@ -275,6 +346,10 @@ def main() -> None:
         "unique season_year values:",
         sorted(processed["season_year"].dropna().astype(int).unique().tolist()),
     )
+    print("included 3pt columns:", included_3pt_cols if included_3pt_cols else "None")
+    if "three_pa_rate" in processed.columns:
+        print("three_pa_rate describe:")
+        print(processed["three_pa_rate"].describe().to_string())
     print("first 5 rows:")
     print(processed.head(5).to_string(index=False))
 

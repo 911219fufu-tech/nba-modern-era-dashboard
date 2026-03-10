@@ -119,6 +119,30 @@ select {
   font-size: 13px;
 }
 
+.line-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.line-metric-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.line-metric-control span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.line-metric-control select {
+  height: 32px;
+  min-width: 150px;
+}
+
 .legend-inline {
   display: flex;
   gap: 16px;
